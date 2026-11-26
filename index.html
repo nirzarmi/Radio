@@ -42,6 +42,22 @@ h1{font:700 30px/1.05 "Barlow Condensed",sans-serif;margin:0}
 .now{display:flex;gap:14px;align-items:center}
 .art{width:64px;height:64px;flex:none;border-radius:14px;background:#fff;color:var(--red);display:grid;place-items:center;overflow:hidden;font:700 24px "Barlow Condensed";box-shadow:0 4px 12px rgba(0,0,0,.25)}
 .art img{width:100%;height:100%;object-fit:contain}
+button.art{position:relative;padding:0;overflow:visible}
+button.art>span{width:100%;height:100%;border-radius:14px;overflow:hidden;display:grid;place-items:center}
+.pen{position:absolute;right:-6px;bottom:-6px;width:24px;height:24px;border-radius:50%;background:var(--gold);color:#3a2a00;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.pen svg{width:13px;height:13px;fill:currentColor}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet.show{display:flex}
+.card{background:var(--bg);color:var(--ink);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:20px 20px calc(env(safe-area-inset-bottom) + 20px)}
+.card h2{font:700 24px/1.1 "Barlow Condensed",sans-serif;margin:0 0 4px}
+.card p{margin:0 0 16px;color:var(--soft);font-size:14px}
+.prev{width:96px;height:96px;border-radius:18px;background:var(--chip);margin:0 auto 16px;display:grid;place-items:center;overflow:hidden;font:700 30px "Barlow Condensed";color:var(--red)}
+.prev img{width:100%;height:100%;object-fit:cover}
+.card .btn{display:block;width:100%;min-height:48px;border-radius:12px;font-weight:600;margin-top:8px;background:var(--chip);text-align:center;line-height:48px}
+.card .btn.main{background:var(--red);color:#fff}
+.card .urlrow{display:flex;gap:8px;margin-top:8px}
+.card .urlrow input{flex:1;font:16px Barlow,sans-serif;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink)}
+.card .urlrow button{padding:0 16px;border-radius:12px;background:var(--ink);color:var(--bg);font-weight:600}
 .meta{flex:1}
 .name{font:700 24px/1.1 "Barlow Condensed",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sub{font-size:14px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
@@ -92,7 +108,7 @@ li .tx{flex:1}
   </div>
   <div class="dial" aria-hidden="true"><svg id="scale"></svg><div class="needle" id="needle"></div></div>
   <div class="now">
-    <div class="art" id="art">FM</div>
+    <button class="art" id="artBtn" aria-label="Change station picture"><span id="art">FM</span><span class="pen" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17.2V21h3.8L17.9 9.9l-3.8-3.8zM20.7 7.1a1 1 0 000-1.4l-2.4-2.4a1 1 0 00-1.4 0l-1.9 1.9 3.8 3.8z"/></svg></span></button>
     <div class="meta">
       <div class="name" id="nName" dir="auto">Pick a station</div>
       <div class="sub"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="nSub">Tap any station below</span></div>
@@ -115,6 +131,17 @@ li .tx{flex:1}
 </div>
 <ul id="list"></ul>
 <div class="toast" id="toast"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
+  <div class="card">
+    <h2 id="shT">Station picture</h2>
+    <p id="shSub" dir="auto"></p>
+    <div class="prev" id="shPrev"></div>
+    <label class="btn main">Choose from Photos<input type="file" id="shFile" accept="image/*" hidden></label>
+    <div class="urlrow"><input id="shUrl" type="url" placeholder="…or paste an image link" autocomplete="off"><button id="shUrlOk">Use</button></div>
+    <button class="btn" id="shReset">Back to original</button>
+    <button class="btn" id="shClose">Done</button>
+  </div>
+</div>
 <audio id="audio" playsinline preload="none"></audio>
 
 <script>
@@ -160,7 +187,9 @@ async function seed(){
 }
 
 function initials(n){return esc((n.replace(/[^\p{L}\p{N} ]/gu,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('')||'FM').toUpperCase())}
-function iconHTML(s){return (s.fav?`<img src="${esc(s.fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(this.dataset.i))" data-i="${initials(s.name)}">`:initials(s.name))}
+let art=store.get('art',{});
+const pic=s=>art[s.id]||s.fav;
+function iconHTML(s){const src=pic(s);return (src?`<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(this.dataset.i))" data-i="${initials(s.name)}">`:initials(s.name))}
 const isFav=s=>favs&&favs.some(f=>f.id===s.id);
 function desc(s){return [s.tags,s.codec&&(s.codec+(s.br?' '+s.br+'k':'')),tab==='search'&&s.country].filter(Boolean).map(esc).join(' · ')||'Live'}
 
@@ -191,7 +220,7 @@ function showNow(){
   const h=[...cur.name].reduce((a,c)=>a*31+c.charCodeAt(0)>>>0,7);
   $('needle').style.left=(8+h%84)+'%';
   if('mediaSession' in navigator){
-    navigator.mediaSession.metadata=new MediaMetadata({title:cur.name,artist:'Live radio',album:cur.tags||'',artwork:cur.fav?[{src:cur.fav,sizes:'512x512'}]:[{src:'icon.png',sizes:'180x180',type:'image/png'}]});
+    navigator.mediaSession.metadata=new MediaMetadata({title:cur.name,artist:'Live radio',album:cur.tags||'',artwork:pic(cur)?[{src:pic(cur),sizes:'512x512'}]:[{src:'icon.png',sizes:'180x180',type:'image/png'}]});
   }
 }
 function play(s){
@@ -277,6 +306,37 @@ function drawScale(){
 }
 const ro=new ResizeObserver(()=>{drawScale();document.documentElement.style.setProperty('--ph',$('player').offsetHeight+'px')});
 ro.observe($('player'));
+
+function sheetPrev(){$('shPrev').innerHTML=iconHTML(cur)}
+function setArt(v){
+  if(v)art[cur.id]=v;else delete art[cur.id];
+  try{localStorage.setItem('radio.art',JSON.stringify(art))}catch{toast('Not enough space to save this picture');return}
+  sheetPrev();showNow();render();
+}
+$('artBtn').addEventListener('click',()=>{
+  if(!cur){toast('Play a station first, then tap its picture');return}
+  $('shSub').textContent=cur.name;$('shUrl').value='';sheetPrev();$('sheet').classList.add('show');
+});
+$('shClose').addEventListener('click',()=>$('sheet').classList.remove('show'));
+$('sheet').addEventListener('click',e=>{if(e.target.id==='sheet')$('sheet').classList.remove('show')});
+$('shReset').addEventListener('click',()=>setArt(null));
+$('shUrlOk').addEventListener('click',()=>{
+  const v=$('shUrl').value.trim();
+  if(!/^https:\/\//i.test(v)){toast('Paste a link that starts with https://');return}
+  setArt(v);
+});
+$('shFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const url=URL.createObjectURL(f),img=new Image();
+  img.onload=()=>{
+    const S=256,c=document.createElement('canvas');c.width=c.height=S;
+    const k=Math.max(S/img.width,S/img.height),w=img.width*k,h=img.height*k;
+    c.getContext('2d').drawImage(img,(S-w)/2,(S-h)/2,w,h);
+    URL.revokeObjectURL(url);setArt(c.toDataURL('image/jpeg',.85));e.target.value='';
+  };
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('Couldn’t read that image')};
+  img.src=url;
+});
 
 (async()=>{
   if(cur){showNow();setState('paused')}
