@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Radio">
+<meta name="theme-color" content="#b3122a">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<title>Live Radio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: a confident pocket transistor radio, warm and quick to use
+IDEA: the tuner face of a red bakelite radio, dial scale and needle
+PICTURE: the red now-playing panel with a live dial and equaliser bars
+COLOUR and TYPE: bakelite red, white list, ink; Barlow Condensed + Barlow
+LAYOUT: fixed red player on top, tabs, station list fills the rest
+*/
+:root{color-scheme:light dark;
+--red:#b3122a;--red2:#8e0d20;--bg:light-dark(#ffffff,#120a0c);--ink:light-dark(#17181b,#f3eeee);
+--soft:light-dark(#6b6d73,#a89c9e);--line:light-dark(#ececee,#2a1d20);--chip:light-dark(#f3f3f5,#22171a);--gold:#ffd166}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 Barlow,system-ui,sans-serif;overflow-x:clip;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.player{background:linear-gradient(170deg,var(--red),var(--red2));color:#fff;padding:calc(env(safe-area-inset-top) + 14px) max(18px,env(safe-area-inset-right)) 18px max(18px,env(safe-area-inset-left));position:sticky;top:0;z-index:2;box-shadow:0 6px 20px rgba(80,0,10,.25)}
+.top{display:flex;justify-content:space-between;align-items:center}
+h1{font:700 30px/1.05 "Barlow Condensed",sans-serif;margin:0}
+.sleep{display:flex;gap:4px;align-items:center;font-size:13px;opacity:.95}
+.sleep button{padding:6px 9px;border-radius:99px;background:rgba(255,255,255,.14);min-height:32px;font-size:13px}
+.sleep button.on{background:#fff;color:var(--red)}
+.dial{position:relative;height:34px;margin:14px 0 12px;border-radius:6px;background:rgba(0,0,0,.18);overflow:hidden}
+.dial svg{position:absolute;inset:0;width:100%;height:100%}
+.needle{position:absolute;top:3px;bottom:3px;width:3px;border-radius:2px;background:var(--gold);box-shadow:0 0 10px var(--gold);left:50%;transition:left .9s cubic-bezier(.5,1.6,.4,1)}
+.now{display:flex;gap:14px;align-items:center}
+.art{width:64px;height:64px;flex:none;border-radius:14px;background:#fff;color:var(--red);display:grid;place-items:center;overflow:hidden;font:700 24px "Barlow Condensed";box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.art img{width:100%;height:100%;object-fit:contain}
+.meta{flex:1}
+.name{font:700 24px/1.1 "Barlow Condensed",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:14px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:8px}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px}
+.eq i{width:3px;background:var(--gold);height:30%;border-radius:1px}
+.playing .eq i{animation:eq .9s ease-in-out infinite alternate}
+.eq i:nth-child(2){animation-delay:-.3s}.eq i:nth-child(3){animation-delay:-.6s}.eq i:nth-child(4){animation-delay:-.15s}
+@keyframes eq{to{height:100%}}
+.ctrl{display:flex;gap:6px;align-items:center}
+.ctrl button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center}
+.ctrl .pp{width:62px;height:62px;background:#fff;color:var(--red);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.ctrl svg{width:22px;height:22px;fill:currentColor}.ctrl .pp svg{width:28px;height:28px}
+.spin{width:26px;height:26px;border:3px solid rgba(179,18,42,.25);border-top-color:var(--red);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(1turn)}}
+.tabs{display:flex;gap:6px;padding:12px max(18px,env(safe-area-inset-left)) 6px;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:var(--ph,200px);z-index:1}
+.tabs button{padding:8px 16px;border-radius:99px;background:var(--chip);font-weight:600;min-height:40px}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+.search{padding:10px max(18px,env(safe-area-inset-left)) 4px;display:none}
+.search.show{display:block}
+.search input{width:100%;font:16px Barlow,sans-serif;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--ink)}
+.hint{font-size:13px;color:var(--soft);margin:8px 2px 0}
+ul{list-style:none;margin:0;padding:0 0 calc(env(safe-area-inset-bottom) + 24px)}
+li{display:flex;align-items:center;gap:12px;padding:10px max(18px,env(safe-area-inset-left));border-bottom:1px solid var(--line);min-height:64px}
+li.cur{background:light-dark(#fff2f4,#2a1015)}
+li .row{flex:1;display:flex;gap:12px;align-items:center;text-align:start;min-height:44px}
+li .ic{width:44px;height:44px;flex:none;border-radius:10px;background:var(--chip);display:grid;place-items:center;overflow:hidden;font:700 17px "Barlow Condensed";color:var(--red)}
+li .ic img{width:100%;height:100%;object-fit:contain;background:#fff}
+li .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+li .d{font-size:13px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+li .tx{flex:1}
+.star{width:44px;height:44px;display:grid;place-items:center;flex:none}
+.star svg{width:24px;height:24px;fill:none;stroke:var(--soft);stroke-width:1.8}
+.star.on svg{fill:var(--red);stroke:var(--red)}
+.empty{padding:40px 24px;text-align:center;color:var(--soft)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){.playing .eq i,.spin{animation:none}.needle{transition:none}}
+</style>
+</head>
+<body>
+<header class="player" id="player">
+  <div class="top">
+    <h1>Radio</h1>
+    <div class="sleep" id="sleep" aria-label="Sleep timer">
+      <span>Sleep</span>
+      <button data-m="0" class="on">Off</button><button data-m="15">15</button><button data-m="30">30</button><button data-m="60">60</button>
+    </div>
+  </div>
+  <div class="dial" aria-hidden="true"><svg id="scale"></svg><div class="needle" id="needle"></div></div>
+  <div class="now">
+    <div class="art" id="art">FM</div>
+    <div class="meta">
+      <div class="name" id="nName" dir="auto">Pick a station</div>
+      <div class="sub"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="nSub">Tap any station below</span></div>
+    </div>
+    <div class="ctrl">
+      <button id="prev" aria-label="Previous favourite"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="pp" id="pp" aria-label="Play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
+      <button id="next" aria-label="Next favourite"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg></button>
+    </div>
+  </div>
+</header>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="fav" aria-selected="true">Favourites</button>
+  <button role="tab" data-tab="il" aria-selected="false">Israel</button>
+  <button role="tab" data-tab="search" aria-selected="false">Search</button>
+</nav>
+<div class="search" id="searchBox">
+  <input id="q" type="search" placeholder="Station, city or genre — e.g. BBC, jazz, Athens" autocomplete="off" enterkeyhint="search">
+  <p class="hint">Searches more than 30,000 stations worldwide. Only streams that play on iPhone are shown.</p>
+</div>
+<ul id="list"></ul>
+<div class="toast" id="toast"></div>
+<audio id="audio" playsinline preload="none"></audio>
+
+<script>
+{
+const HOSTS=['de1','de2','fi1','at1','nl1'].map(h=>`https://${h}.api.radio-browser.info`);
+const SEED=[/kan\s*bet|כאן\s*ב|reshet\s*bet/i,/galgalatz|גלגל/i,/galei\s*tsahal|galei\s*zahal|galatz|גלי\s*צה/i,/kan\s*88|כאן\s*88/i,/kan\s*gimel|כאן\s*ג/i,/103\s*fm/i,/eco\s*99|99\s*fm/i,/radio\s*tel\s*aviv|102\s*fm/i,/100\s*fm|radios\s*100/i];
+const $=id=>document.getElementById(id);
+const audio=$('audio'),list=$('list'),pp=$('pp');
+const ICON_PLAY='<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+const ICON_PAUSE='<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+const STAR='<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.8z"/></svg>';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k,d){try{const v=localStorage.getItem('radio.'+k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem('radio.'+k,JSON.stringify(v))}catch{}}};
+
+let favs=store.get('favs',null),cur=store.get('last',null),tab='fav',il=[],results=[],state='idle',sleepT=null,hostI=0;
+
+async function api(path){
+  for(let n=0;n<HOSTS.length;n++){
+    const h=HOSTS[(hostI+n)%HOSTS.length];
+    try{const r=await fetch(h+path,{headers:{'Accept':'application/json'}});if(r.ok){hostI=(hostI+n)%HOSTS.length;return await r.json()}}catch{}
+  }
+  throw new Error('offline');
+}
+const norm=s=>({id:s.stationuuid,name:(s.name||'').trim(),url:s.url_resolved||s.url,fav:s.favicon||'',tags:(s.tags||'').split(',').filter(Boolean).slice(0,3).join(' · '),country:s.countrycode||'',codec:s.codec||'',br:s.bitrate||0,hls:!!s.hls});
+const playable=s=>/^https:/i.test(s.url);
+const dedupe=a=>{const seen=new Set();return a.filter(s=>{const k=s.name.toLowerCase();if(seen.has(k))return false;seen.add(k);return true})};
+const query=p=>new URLSearchParams({hidebroken:'true',order:'clickcount',reverse:'true',limit:'120',...p}).toString();
+
+async function loadIL(){
+  if(il.length)return il;
+  const raw=await api('/json/stations/search?'+query({countrycode:'IL'}));
+  il=dedupe(raw.map(norm).filter(playable));
+  return il;
+}
+async function seed(){
+  if(favs)return;
+  try{
+    const a=await loadIL();
+    favs=SEED.map(re=>a.find(s=>re.test(s.name))).filter(Boolean);
+    if(favs.length<4)favs=[...new Map([...favs,...a.slice(0,8)].map(s=>[s.id,s])).values()];
+    store.set('favs',favs);
+  }catch{favs=[]}
+}
+
+function initials(n){return esc((n.replace(/[^\p{L}\p{N} ]/gu,'').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('')||'FM').toUpperCase())}
+function iconHTML(s){return (s.fav?`<img src="${esc(s.fav)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode(this.dataset.i))" data-i="${initials(s.name)}">`:initials(s.name))}
+const isFav=s=>favs&&favs.some(f=>f.id===s.id);
+function desc(s){return [s.tags,s.codec&&(s.codec+(s.br?' '+s.br+'k':'')),tab==='search'&&s.country].filter(Boolean).map(esc).join(' · ')||'Live'}
+
+function render(){
+  const items=tab==='fav'?(favs||[]):tab==='il'?il:results;
+  if(!items.length){
+    const msg=tab==='fav'?(favs?'No favourites yet. Tap the star next to any station to add it here.':'Loading stations…'):tab==='il'?'Loading Israeli stations…':($('q').value.trim()?'No stations found.':'Type to search stations worldwide.');
+    list.innerHTML=`<li class="empty">${msg}</li>`;return;
+  }
+  list.innerHTML=items.map((s,i)=>`<li class="${cur&&cur.id===s.id?'cur':''}">
+    <button class="row" data-i="${i}"><span class="ic">${iconHTML(s)}</span><span class="tx"><div class="t" dir="auto">${esc(s.name)}</div><div class="d" dir="auto">${desc(s)}</div></span></button>
+    <button class="star ${isFav(s)?'on':''}" data-s="${i}" aria-label="${isFav(s)?'Remove from':'Add to'} favourites">${STAR}</button></li>`).join('');
+  list._items=items;
+}
+
+function setState(st){
+  state=st;
+  $('player').classList.toggle('playing',st==='playing');
+  pp.innerHTML=st==='loading'?'<span class="spin"></span>':st==='playing'?ICON_PAUSE:ICON_PLAY;
+  pp.setAttribute('aria-label',st==='playing'?'Pause':'Play');
+  if(cur)$('nSub').textContent=st==='loading'?'Tuning in…':st==='playing'?'Live'+(cur.tags?' · '+cur.tags:''):st==='error'?'Stream unavailable — try another':'Paused';
+  if('mediaSession' in navigator)navigator.mediaSession.playbackState=st==='playing'?'playing':'paused';
+}
+function showNow(){
+  if(!cur)return;
+  $('nName').textContent=cur.name;
+  $('art').innerHTML=iconHTML(cur);
+  const h=[...cur.name].reduce((a,c)=>a*31+c.charCodeAt(0)>>>0,7);
+  $('needle').style.left=(8+h%84)+'%';
+  if('mediaSession' in navigator){
+    navigator.mediaSession.metadata=new MediaMetadata({title:cur.name,artist:'Live radio',album:cur.tags||'',artwork:cur.fav?[{src:cur.fav,sizes:'512x512'}]:[{src:'icon.png',sizes:'180x180',type:'image/png'}]});
+  }
+}
+function play(s){
+  cur=s;store.set('last',s);showNow();setState('loading');
+  audio.src=s.url;
+  audio.play().catch(e=>{if(e.name!=='AbortError'){setState('error');toast('Couldn’t play '+s.name)}});
+  fetch(HOSTS[hostI]+'/json/url/'+encodeURIComponent(s.id)).catch(()=>{});
+  render();
+}
+function toggle(){
+  if(!cur){const f=(favs&&favs[0])||il[0];if(f)play(f);return}
+  if(state==='playing'||state==='loading'){audio.pause();audio.removeAttribute('src');audio.load();setState('paused')}
+  else play(cur);
+}
+function step(d){
+  const a=(favs&&favs.length?favs:il);if(!a.length)return;
+  const i=cur?a.findIndex(s=>s.id===cur.id):-1;
+  play(a[(i+d+a.length)%a.length]);
+}
+function toggleFav(s){
+  favs=favs||[];
+  favs=isFav(s)?favs.filter(f=>f.id!==s.id):[...favs,s];
+  store.set('favs',favs);toast(isFav(s)?'Added to favourites':'Removed from favourites');render();
+}
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200)}
+
+audio.addEventListener('playing',()=>setState('playing'));
+audio.addEventListener('waiting',()=>state==='playing'&&setState('loading'));
+audio.addEventListener('error',()=>{if(audio.getAttribute('src')){setState('error');toast('This stream isn’t responding')}});
+pp.addEventListener('click',toggle);
+$('prev').addEventListener('click',()=>step(-1));
+$('next').addEventListener('click',()=>step(1));
+if('mediaSession' in navigator){
+  const ms=navigator.mediaSession;
+  ms.setActionHandler('play',()=>cur&&play(cur));
+  ms.setActionHandler('pause',()=>{audio.pause();setState('paused')});
+  try{ms.setActionHandler('nexttrack',()=>step(1));ms.setActionHandler('previoustrack',()=>step(-1))}catch{}
+}
+
+list.addEventListener('click',e=>{
+  const r=e.target.closest('.row'),st=e.target.closest('.star');
+  if(r)play(list._items[+r.dataset.i]);
+  else if(st)toggleFav(list._items[+st.dataset.s]);
+});
+
+document.querySelector('.tabs').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-tab]');if(!b)return;
+  tab=b.dataset.tab;
+  document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x===b));
+  $('searchBox').classList.toggle('show',tab==='search');
+  render();
+  if(tab==='il'&&!il.length){try{await loadIL()}catch{toast('Can’t reach the station directory')}render()}
+  if(tab==='search')$('q').focus();
+});
+
+let qt,qn=0;
+$('q').addEventListener('input',()=>{
+  clearTimeout(qt);
+  qt=setTimeout(async()=>{
+    const v=$('q').value.trim(),n=++qn;
+    if(v.length<2){results=[];render();return}
+    try{
+      const [a,b]=await Promise.all([api('/json/stations/search?'+query({name:v,limit:'80'})),api('/json/stations/search?'+query({tag:v,limit:'40'}))]);
+      if(n!==qn)return;
+      results=dedupe([...a,...b].map(norm).filter(playable));render();
+    }catch{toast('Can’t reach the station directory')}
+  },350);
+});
+
+document.getElementById('sleep').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  const m=+b.dataset.m;
+  document.querySelectorAll('#sleep button').forEach(x=>x.classList.toggle('on',x===b));
+  clearTimeout(sleepT);
+  if(m){sleepT=setTimeout(()=>{audio.pause();setState('paused');document.querySelector('#sleep [data-m="0"]').click()},m*60000);toast(`Radio will stop in ${m} minutes`)}
+});
+
+function drawScale(){
+  const s=$('scale'),W=s.clientWidth,H=s.clientHeight;let o='';
+  for(let i=0;i<=60;i++){const x=W*(.04+.92*i/60),big=i%10===0;o+=`<line x1="${x}" x2="${x}" y1="${big?H*.2:H*.45}" y2="${H*.8}" stroke="rgba(255,255,255,${big?.7:.35})" stroke-width="1"/>`}
+  if(W>360)[88,92,96,100,104,108].forEach((f,i)=>{o+=`<text x="${W*(.04+.92*i*10/60)+3}" y="${H*.38}" font-size="9" fill="rgba(255,255,255,.6)" font-family="Barlow">${f}</text>`});
+  s.innerHTML=o;
+}
+const ro=new ResizeObserver(()=>{drawScale();document.documentElement.style.setProperty('--ph',$('player').offsetHeight+'px')});
+ro.observe($('player'));
+
+(async()=>{
+  if(cur){showNow();setState('paused')}
+  render();
+  await seed();
+  render();
+  loadIL().catch(()=>{});
+})();
+}
+</script>
+</body>
+</html>
